@@ -1,0 +1,15 @@
+---
+# Durcissement SSH minimal. validate : sshd -t contrôle la syntaxe du fichier
+# AVANT qu'il soit remplacé, ce qui évite de se retrouver enfermé dehors avec
+# une configuration invalide. Les directives des fichiers de sshd_config.d
+# (inclus en tête) restent prioritaires : cette étape garantit surtout la
+# cohérence du fichier principal.
+- name: Appliquer le durcissement SSH minimal
+  ansible.builtin.lineinfile:
+    path: /etc/ssh/sshd_config
+    regexp: "{{ item.regexp }}"
+    line: "{{ item.line }}"
+    mode: "0644"
+    validate: /usr/sbin/sshd -t -f %s
+  loop: "{{ webserver_ssh_settings }}"
+  notify: Recharger sshd
