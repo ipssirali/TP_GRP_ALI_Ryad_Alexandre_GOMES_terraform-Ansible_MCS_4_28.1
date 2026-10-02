@@ -1,0 +1,13 @@
+---
+# Déclenchés seulement si le binaire ou l'unité systemd ont changé : au second
+# passage, aucun redémarrage n'a lieu. L'ordre compte : systemd relit l'unité
+# avant le redémarrage du service.
+
+- name: Recharger systemd
+  ansible.builtin.systemd_service:
+    daemon_reload: true
+
+- name: Redémarrer node_exporter
+  ansible.builtin.systemd_service:
+    name: node_exporter
+    state: restarted

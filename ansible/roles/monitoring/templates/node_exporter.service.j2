@@ -1,0 +1,27 @@
+# {{ ansible_managed }}
+
+[Unit]
+Description=Prometheus node_exporter
+Wants=network-online.target
+After=network-online.target
+
+[Service]
+User={{ monitoring_user }}
+Group={{ monitoring_user }}
+Type=simple
+ExecStart={{ monitoring_bin_path }} \
+  --web.listen-address={{ monitoring_listen_address }} \
+  --log.level={{ monitoring_log_level }}{% for collector in monitoring_disabled_collectors %} \
+  --no-collector.{{ collector }}{% endfor %}
+
+Restart=on-failure
+RestartSec=5
+
+# Le service n'a besoin que de lire /proc et /sys : on lui retire tout le reste.
+NoNewPrivileges=true
+ProtectSystem=strict
+ProtectHome=true
+PrivateTmp=true
+
+[Install]
+WantedBy=multi-user.target

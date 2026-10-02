@@ -1,0 +1,79 @@
+---
+# Installation de node_exporter depuis l'archive officielle, puis exécution en
+# service systemd sous un compte dédié. Chaque tâche décrit un état, pas une
+# action : au second passage, rien n'est retéléchargé ni redémarré (changed=0).
+
+- name: Créer le compte système du service
+  ansible.builtin.user:
+    name: "{{ monitoring_user }}"
+    system: true
+    shell: /usr/sbin/nologin
+    create_home: false
+
+# L'empreinte est vérifiée au téléchargement. Si l'archive est déjà présente
+# avec la bonne empreinte, get_url ne la retélécharge pas.
+- name: Télécharger l'archive de node_exporter
+  ansible.builtin.get_url:
+    url: "{{ monitoring_node_exporter_url }}"
+    dest: "/tmp/{{ monitoring_node_exporter_release }}.tar.gz"
+    checksum: "{{ monitoring_node_exporter_checksum }}"
+    mode: "0644"
+
+# creates : l'extraction n'a lieu que si cette version n'est pas déjà installée.
+- name: Extraire node_exporter
+  ansible.builtin.unarchive:
+    src: "/tmp/{{ monitoring_node_exporter_release }}.tar.gz"
+    dest: "{{ monitoring_install_dir }}"
+    remote_src: true
+    creates: "{{ monitoring_install_dir }}/{{ monitoring_node_exporter_release }}/node_exporter"
+
+# Un lien stable vers la version installée : le service pointe toujours sur le
+# même chemin, et une montée de version ne change que la cible du lien.
+- name: Publier le binaire dans le PATH
+  ansible.builtin.file:
+    src: "{{ monitoring_install_dir }}/{{ monitoring_node_exporter_release }}/node_exporter"
+    dest: "{{ monitoring_bin_path }}"
+    state: link
+  notify: Redémarrer node_exporter
+
+- name: Déployer l'unité systemd
+  ansible.builtin.template:
+    src: node_exporter.service.j2
+    dest: /etc/systemd/system/node_exporter.service
+    owner: root
+    group: root
+    mode: "0644"
+  notify:
+    - Recharger systemd
+    - Redémarrer node_exporter
+
+- name: Démarrer node_exporter et l'activer au boot
+  ansible.builtin.systemd_service:
+    name: node_exporter
+    state: started
+    enabled: true
+
+# Applique un éventuel changement de configuration avant la vérification.
+- name: Appliquer les redémarrages en attente
+  ansible.builtin.meta: flush_handlers
+
+# Contrôle de bout en bout : le service répond et expose bien ses propres
+# métriques. Lecture seule, donc jamais "changed", et exécutée aussi en mode
+# --check pour que l'assertion suivante ait un résultat à examiner.
+- name: Interroger le point de métriques local
+  ansible.builtin.uri:
+    url: "http://{{ monitoring_listen_address }}/metrics"
+    return_content: true
+  register: monitoring_metrics
+  changed_when: false
+  check_mode: false
+  retries: 5
+  delay: 2
+  until: monitoring_metrics.status == 200
+
+- name: Vérifier que node_exporter publie ses métriques
+  ansible.builtin.assert:
+    that:
+      - "'node_exporter_build_info' in monitoring_metrics.content"
+    fail_msg: node_exporter ne publie pas de métriques sur {{ monitoring_listen_address }}
+    success_msg: node_exporter répond sur {{ monitoring_listen_address }}
