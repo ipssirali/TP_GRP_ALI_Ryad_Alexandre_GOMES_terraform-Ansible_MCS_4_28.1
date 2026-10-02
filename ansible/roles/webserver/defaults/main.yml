@@ -1,0 +1,67 @@
+---
+# Valeurs par défaut du rôle webserver. Elles décrivent un serveur neutre : tout
+# ce qui change d'un environnement à l'autre (verbosité des logs, affichage des
+# erreurs PHP, nom de l'environnement) est surchargé dans
+# group_vars/<environnement>.yml, jamais en modifiant le rôle.
+
+# --- Identité de l'application -------------------------------------------------
+webserver_app_name: TrackFleet
+webserver_site_name: trackfleet
+
+# Affiché sur la page de test : permet de voir d'un coup d'œil sur quel
+# environnement on est tombé. Surchargé dans les group_vars.
+webserver_environment: inconnu
+
+# --- Serveur web et PHP ----------------------------------------------------------
+# Version de PHP fournie par Ubuntu 22.04 : elle détermine le nom du socket
+# PHP-FPM utilisé par nginx et le chemin de la configuration PHP.
+webserver_php_version: "8.1"
+
+webserver_docroot: /var/www/trackfleet
+
+# Répertoire de la configuration applicative qui contient le secret. Il est
+# lisible par root et par le groupe du serveur web, par personne d'autre.
+webserver_config_dir: /etc/trackfleet
+webserver_web_group: www-data
+
+# Chemin servi directement par nginx pour le health check de l'ALB. Il doit
+# rester identique à la variable health_check_path du module Terraform compute.
+webserver_health_path: /health
+
+webserver_packages:
+  - nginx
+  - php-fpm
+  - php-pgsql
+  - postgresql-client
+
+webserver_base_tools:
+  - curl
+  - jq
+
+webserver_timezone: Europe/Paris
+
+# --- Niveau de détail des journaux (différencié par environnement) -------------
+# Valeurs sobres par défaut, adaptées à la production. Le staging les relève
+# pour faciliter le diagnostic.
+webserver_nginx_error_log_level: warn
+
+# Valeurs entre guillemets : ce sont des chaînes écrites telles quelles dans un
+# fichier .ini PHP, pas des booléens YAML.
+webserver_php_display_errors: "Off"
+webserver_php_error_reporting: "E_ALL & ~E_DEPRECATED & ~E_STRICT"
+
+# --- Accès à la base de données ----------------------------------------------------
+# L'hôte, la base, le compte et le mot de passe n'ont volontairement pas de
+# valeur par défaut : le rôle refuse de s'exécuter s'ils manquent. Le mot de
+# passe vient d'un coffre Ansible Vault, jamais d'un fichier en clair.
+webserver_db_port: 5432
+
+# --- Durcissement SSH minimal ------------------------------------------------------
+# Plus de connexion root ni par mot de passe : seules les clés sont acceptées.
+# La regexp couvre aussi la version commentée de la directive pour la remplacer
+# au lieu d'en ajouter une seconde.
+webserver_ssh_settings:
+  - regexp: '^\s*#?\s*PermitRootLogin\b'
+    line: PermitRootLogin no
+  - regexp: '^\s*#?\s*PasswordAuthentication\b'
+    line: PasswordAuthentication no
