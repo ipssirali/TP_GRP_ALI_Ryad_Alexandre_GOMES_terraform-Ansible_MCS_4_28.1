@@ -14,3 +14,7 @@ webserver_nginx_error_log_level: info
 # production où elles pourraient révéler des informations internes.
 webserver_php_display_errors: "On"
 webserver_php_error_reporting: "E_ALL"
+
+# Journal de node_exporter détaillé, pour diagnostiquer la supervision avant
+# la mise en production.
+monitoring_log_level: debug
