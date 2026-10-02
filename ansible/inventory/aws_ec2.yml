@@ -1,0 +1,38 @@
+---
+# Inventaire dynamique : interroge l'API EC2 au moment de l'exécution, donc il
+# suit automatiquement les créations, remplacements et suppressions d'instances
+# décidés par l'Auto Scaling Group, sans qu'on touche à ce fichier.
+plugin: amazon.aws.aws_ec2
+
+regions:
+  - us-east-1
+
+# On ne garde que les instances du projet et en fonctionnement : le tag Project
+# est posé par Terraform, et filtrer l'état évite de cibler des instances en
+# cours d'arrêt ou de remplacement. Le filtre ne porte volontairement pas sur
+# l'environnement : le même fichier sert staging et prod, et le ciblage se fait
+# par groupe (voir keyed_groups), par exemple avec --limit staging.
+filters:
+  tag:Project: trackfleet
+  instance-state-name: running
+
+# Les instances applicatives n'ont pas d'IP publique : on les identifie et on
+# s'y connecte par leur IP privée, atteinte via le bastion.
+hostnames:
+  - private-ip-address
+
+compose:
+  ansible_host: private_ip_address
+
+# Deux familles de groupes, construites à partir des tags posés par Terraform :
+#  - un groupe par environnement (staging, prod), sans préfixe pour que son nom
+#    corresponde exactement au fichier group_vars/<environnement>.yml ;
+#  - un groupe par rôle (role_app, role_bastion).
+# Le playbook cible role_app et --limit restreint à un environnement.
+keyed_groups:
+  - key: ec2_tags.Environment
+    prefix: ""
+    separator: ""
+  - key: ec2_tags.Role
+    prefix: role
+    separator: "_"

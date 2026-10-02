@@ -1,0 +1,15 @@
+---
+# Variables propres à l'environnement prod, la cible de référence. Les valeurs
+# sont sobres : journaux limités à ce qui mérite attention, aucune erreur
+# affichée aux visiteurs. Elles sont écrites ici explicitement, même quand elles
+# valent le défaut du rôle, pour que la différence avec staging se lise en
+# comparant les deux fichiers.
+
+webserver_environment: prod
+
+webserver_nginx_error_log_level: warn
+
+# Une erreur PHP est journalisée, jamais affichée : elle pourrait exposer des
+# chemins, des noms de comptes ou des requêtes.
+webserver_php_display_errors: "Off"
+webserver_php_error_reporting: "E_ALL & ~E_DEPRECATED & ~E_STRICT"

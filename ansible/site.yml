@@ -1,0 +1,71 @@
+---
+# Playbook principal : applique le rôle webserver aux instances applicatives.
+# Les hôtes viennent de l'inventaire dynamique (groupe role_app), jamais d'une
+# liste écrite à la main. Pour cibler un seul environnement, on restreint par
+# groupe :
+#   ansible-playbook site.yml --limit staging
+#   ansible-playbook site.yml --limit prod
+# Les rôles portent toute la logique : ce fichier reste volontairement court.
+- name: Configurer les instances applicatives
+  hosts: role_app
+  become: true
+
+  # Garde-fou : une instance sans tag Environment ne serait dans aucun groupe
+  # d'environnement et recevrait des variables incomplètes. On refuse plutôt que
+  # de configurer à moitié.
+  pre_tasks:
+    - name: Vérifier que l'instance appartient à un environnement connu
+      ansible.builtin.assert:
+        that:
+          - webserver_environment is defined
+          - webserver_environment in ['staging', 'prod']
+        fail_msg: L'instance n'a pas de tag Environment valide (staging ou prod).
+        quiet: true
+
+  roles:
+    - webserver
+
+  # Contrôles automatiques de fin de passage : si le site ou la base ne répondent
+  # pas comme prévu, le playbook échoue au lieu de laisser croire que tout va bien.
+  post_tasks:
+    - name: Vérifier que le point de health check répond
+      ansible.builtin.uri:
+        url: "http://localhost{{ webserver_health_path }}"
+        status_code: 200
+        return_content: true
+      register: site_health
+      changed_when: false
+      # Lecture seule : exécuté même en mode --check, sinon le module est sauté et
+      # l'assertion suivante échoue faute de résultat à examiner.
+      check_mode: false
+
+    - name: Récupérer la page de test
+      ansible.builtin.uri:
+        url: http://localhost/
+        status_code: 200
+        return_content: true
+      register: site_page
+      changed_when: false
+      check_mode: false
+
+    # La page doit afficher l'environnement de l'instance : c'est la preuve que
+    # les variables propres à staging ou prod ont bien été appliquées.
+    - name: Contrôler le contenu du health check et de la page de test
+      ansible.builtin.assert:
+        that:
+          - site_health.status == 200
+          - "'ok' in site_health.content"
+          - site_page.status == 200
+          - "'Connexion RDS : OK' in site_page.content"
+          - "('Environnement : ' ~ webserver_environment) in site_page.content"
+        fail_msg: La page de test, l'environnement ou la connexion à la base est défaillant
+        success_msg: Site, health check, environnement et connexion RDS conformes
+
+    # Contrôle de sécurité : le mot de passe ne doit jamais apparaître dans la page
+    # servie. no_log évite qu'un échec n'affiche la valeur comparée.
+    - name: Vérifier que le mot de passe n'est pas exposé dans la page
+      ansible.builtin.assert:
+        that:
+          - webserver_db_password not in site_page.content
+        quiet: true
+      no_log: true
