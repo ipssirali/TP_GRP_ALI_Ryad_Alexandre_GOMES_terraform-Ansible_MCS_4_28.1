@@ -1,0 +1,16 @@
+---
+# Variables propres à l'environnement staging. Ce groupe est créé par
+# l'inventaire à partir du tag Environment posé par Terraform. Staging est un
+# environnement de test : on y privilégie le diagnostic, au détriment de la
+# discrétion des journaux.
+
+webserver_environment: staging
+
+# Journal d'erreurs nginx plus détaillé, pour comprendre un comportement avant
+# la mise en production.
+webserver_nginx_error_log_level: info
+
+# Les erreurs PHP s'affichent dans la page : pratique pour déboguer, jamais en
+# production où elles pourraient révéler des informations internes.
+webserver_php_display_errors: "On"
+webserver_php_error_reporting: "E_ALL"

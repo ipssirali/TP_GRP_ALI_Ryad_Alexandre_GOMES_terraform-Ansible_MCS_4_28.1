@@ -1,0 +1,25 @@
+---
+# Variables communes à toutes les instances applicatives, quel que soit
+# l'environnement.
+
+# Rebond SSH automatique par le bastion, car les instances n'ont pas d'IP
+# publique. Le bastion est retrouvé dans l'inventaire par ses tags : on prend
+# celui qui est à la fois dans le groupe role_bastion ET dans le groupe de
+# l'environnement de l'instance, ce qui évite de passer par le bastion d'un
+# autre environnement si les deux coexistent dans un même compte. Son adresse
+# n'est donc jamais écrite en dur.
+# ProxyCommand plutôt que ProxyJump pour pouvoir passer les options de clé
+# d'hôte au saut intermédiaire, ce que ProxyJump ne propage pas.
+ansible_ssh_common_args: >-
+  -o StrictHostKeyChecking=no -o UserKnownHostsFile=/dev/null
+  -o ProxyCommand="ssh -W %h:%p -q -o StrictHostKeyChecking=no
+  -o UserKnownHostsFile=/dev/null -i ~/.ssh/id_ed25519
+  ubuntu@{{ hostvars[(groups['role_bastion'] | intersect(groups[webserver_environment]))[0]]['public_ip_address'] }}"
+
+# Accès à la base : seuls l'hôte, la base et le compte viennent de Terraform et
+# sont passés au lancement (rds_host, db_name, db_user). Le mot de passe vient du
+# coffre de chaque environnement (vault_db_password).
+webserver_db_host: "{{ rds_host }}"
+webserver_db_name: "{{ db_name }}"
+webserver_db_user: "{{ db_user }}"
+webserver_db_password: "{{ vault_db_password }}"
