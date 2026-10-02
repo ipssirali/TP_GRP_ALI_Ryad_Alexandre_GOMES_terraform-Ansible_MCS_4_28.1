@@ -39,3 +39,5 @@ Réorganiser l'infrastructure de TrackFleet en modules Terraform réutilisables 
 - Une branche par fonctionnalité, nommée `<prénom>/<sujet>`.
 - Commits au format `type(scope): description`.
 - Aucun secret dans le dépôt : les `.tfvars` réels, les clés et les states sont ignorés par git.
+
+- [Schéma d'architecture multi-environnement](docs/schema.png) : prod et staging, ce qui les relie et ce qui les différencie.
