@@ -1,5 +1,6 @@
 ---
-# Playbook principal : applique le rôle webserver aux instances applicatives.
+# Playbook principal : applique les rôles webserver (serveur applicatif) et
+# monitoring (supervision) aux instances applicatives.
 # Les hôtes viennent de l'inventaire dynamique (groupe role_app), jamais d'une
 # liste écrite à la main. Pour cibler un seul environnement, on restreint par
 # groupe :
@@ -22,8 +23,12 @@
         fail_msg: L'instance n'a pas de tag Environment valide (staging ou prod).
         quiet: true
 
+  # webserver d'abord : le site et la base doivent répondre avant d'ajouter la
+  # supervision. monitoring est indépendant du site (il écoute en local sur son
+  # propre port) et porte ses propres contrôles de fin de passage.
   roles:
     - webserver
+    - monitoring
 
   # Contrôles automatiques de fin de passage : si le site ou la base ne répondent
   # pas comme prévu, le playbook échoue au lieu de laisser croire que tout va bien.
