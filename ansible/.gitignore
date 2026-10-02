@@ -1,0 +1,7 @@
+*.retry
+*.log
+# Le mot de passe du coffre ne doit jamais entrer dans le dépôt : il est stocké
+# hors du dossier, dans le répertoire personnel de chacun. Ces lignes sont une
+# sécurité de plus.
+.vault_pass*
+*vault_pass*
