@@ -1,0 +1,37 @@
+---
+# Contrôles et socle système. On échoue tôt et clairement si une variable
+# indispensable manque, plutôt que de déployer une configuration à moitié vide.
+
+# quiet et no_log : seule la présence des variables est vérifiée, leur valeur
+# (dont le mot de passe) n'apparaît jamais dans la sortie.
+- name: Vérifier que l'accès à la base est entièrement défini
+  ansible.builtin.assert:
+    that:
+      - webserver_db_host is defined
+      - webserver_db_name is defined
+      - webserver_db_user is defined
+      - webserver_db_password is defined
+    fail_msg: >-
+      Variables manquantes : webserver_db_host, webserver_db_name,
+      webserver_db_user et webserver_db_password sont obligatoires.
+    quiet: true
+  no_log: true
+
+# lock_timeout : au premier démarrage, cloud-init ou unattended-upgrades peut
+# détenir le verrou apt. On attend plutôt que d'échouer.
+- name: Mettre à jour le cache des paquets
+  ansible.builtin.apt:
+    update_cache: true
+    cache_valid_time: 3600
+    lock_timeout: 180
+
+- name: Installer les outils de base
+  ansible.builtin.apt:
+    name: "{{ webserver_base_tools }}"
+    state: present
+    lock_timeout: 180
+
+# Des horodatages cohérents dans les journaux de toutes les instances.
+- name: Régler le fuseau horaire
+  community.general.timezone:
+    name: "{{ webserver_timezone }}"

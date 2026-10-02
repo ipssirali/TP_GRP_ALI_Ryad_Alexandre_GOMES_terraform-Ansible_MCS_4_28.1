@@ -1,0 +1,18 @@
+---
+# Point d'entrée du rôle webserver. Le contenu est découpé en trois fichiers
+# pour qu'on puisse relire, tester ou rejouer un volet à part grâce aux tags :
+#   prerequisites : contrôles et socle système
+#   app           : serveur web, PHP, accès à la base, page de test
+#   hardening     : durcissement SSH
+
+- name: Contrôler les variables obligatoires et préparer le système
+  ansible.builtin.import_tasks: prerequisites.yml
+  tags: [prerequisites]
+
+- name: Installer et configurer le serveur applicatif
+  ansible.builtin.import_tasks: app.yml
+  tags: [app]
+
+- name: Durcir l'accès SSH
+  ansible.builtin.import_tasks: hardening.yml
+  tags: [hardening]

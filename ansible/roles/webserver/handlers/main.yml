@@ -1,0 +1,21 @@
+---
+# Les services ne sont rechargés que si un fichier de configuration a réellement
+# changé : c'est ce qui rend le rôle idempotent (aucun rechargement inutile au
+# second passage, donc changed=0). Rechargement plutôt que redémarrage : les
+# connexions en cours ne sont pas coupées.
+
+- name: Recharger nginx
+  ansible.builtin.service:
+    name: nginx
+    state: reloaded
+
+- name: Recharger PHP-FPM
+  ansible.builtin.service:
+    name: "php{{ webserver_php_version }}-fpm"
+    state: reloaded
+
+# Les sessions SSH ouvertes, dont celle d'Ansible, ne sont pas coupées.
+- name: Recharger sshd
+  ansible.builtin.service:
+    name: ssh
+    state: reloaded

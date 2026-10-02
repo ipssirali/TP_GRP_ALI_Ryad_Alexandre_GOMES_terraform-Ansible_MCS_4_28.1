@@ -1,0 +1,6 @@
+; Géré par Ansible. Réglages PHP propres à l'environnement {{ webserver_environment }}.
+; Affichage des erreurs dans la page : utile pour déboguer en staging, à
+; proscrire en prod où il pourrait révéler des informations internes.
+display_errors = {{ webserver_php_display_errors }}
+error_reporting = {{ webserver_php_error_reporting }}
+log_errors = On
