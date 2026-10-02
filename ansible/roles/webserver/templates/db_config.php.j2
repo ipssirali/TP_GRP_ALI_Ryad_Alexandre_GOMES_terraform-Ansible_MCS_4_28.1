@@ -1,0 +1,9 @@
+<?php
+// Géré par Ansible : ne pas modifier à la main. Contient un secret (0640).
+return [
+    'host'     => '{{ webserver_db_host }}',
+    'port'     => {{ webserver_db_port }},
+    'name'     => '{{ webserver_db_name }}',
+    'user'     => '{{ webserver_db_user }}',
+    'password' => '{{ webserver_db_password }}',
+];

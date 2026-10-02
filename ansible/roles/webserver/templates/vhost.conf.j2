@@ -1,0 +1,37 @@
+# Géré par Ansible. Vhost unique de l'application {{ webserver_app_name }}.
+# Environnement : {{ webserver_environment }}
+server {
+    listen 80 default_server;
+    server_name _;
+
+    root {{ webserver_docroot }};
+    index index.php;
+
+    # Niveau de détail du journal d'erreurs : relevé en staging pour faciliter le
+    # diagnostic, sobre en prod. La valeur vient des group_vars de l'environnement.
+    error_log /var/log/nginx/{{ webserver_site_name }}_error.log {{ webserver_nginx_error_log_level }};
+    access_log /var/log/nginx/{{ webserver_site_name }}_access.log;
+
+    # Chemin interrogé par le health check du Target Group : il répond 200 sans
+    # passer par PHP ni par la base, pour qu'une panne de RDS ne fasse pas
+    # retirer toutes les instances du service.
+    location = {{ webserver_health_path }} {
+        access_log off;
+        default_type text/plain;
+        return 200 "ok\n";
+    }
+
+    location / {
+        try_files $uri $uri/ /index.php?$query_string;
+    }
+
+    location ~ \.php$ {
+        include snippets/fastcgi-php.conf;
+        fastcgi_pass unix:/run/php/php{{ webserver_php_version }}-fpm.sock;
+    }
+
+    # Aucun fichier caché (.git, .env...) ne doit être servi.
+    location ~ /\. {
+        deny all;
+    }
+}
