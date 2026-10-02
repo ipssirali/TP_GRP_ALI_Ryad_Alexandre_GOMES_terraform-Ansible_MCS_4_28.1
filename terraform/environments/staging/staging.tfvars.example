@@ -1,0 +1,31 @@
+# Valeurs de l'environnement staging. Copier ce fichier en staging.tfvars et
+# renseigner les valeurs en bas : staging.tfvars est ignoré par git, ne jamais le
+# versionner.
+
+environment = "staging"
+
+# Réseau : plage distincte de prod (10.10.0.0/16) pour qu'ils ne se chevauchent pas.
+vpc_cidr            = "10.20.0.0/16"
+public_subnet_cidrs = ["10.20.1.0/24", "10.20.2.0/24"]
+app_subnet_cidrs    = ["10.20.11.0/24", "10.20.12.0/24"]
+data_subnet_cidrs   = ["10.20.21.0/24", "10.20.22.0/24"]
+
+# Calcul : staging est jetable, une seule instance suffit en temps normal, avec
+# une marge à deux pour tester le scaling.
+instance_type         = "t3.micro"
+instance_profile_name = "LabInstanceProfile"
+asg_min_size          = 1
+asg_desired_capacity  = 1
+asg_max_size          = 2
+
+# Données : même moteur et même version qu'en prod, pour que les tests sur
+# staging restent représentatifs.
+db_instance_class = "db.t3.micro"
+db_engine_version = "16.15"
+db_name           = "trackfleet"
+db_username       = "trackfleet_admin"
+
+# À renseigner dans staging.tfvars (valeurs propres au compte qui déploie) :
+key_name    = "NOM_DE_LA_PAIRE_DE_CLES"
+admin_cidr  = "x.x.x.x/32"
+db_password = "CHANGER_MOI"
