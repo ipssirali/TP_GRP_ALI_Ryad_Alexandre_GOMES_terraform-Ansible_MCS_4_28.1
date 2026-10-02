@@ -1,0 +1,42 @@
+---
+# Valeurs par défaut du rôle monitoring : supervision basique par node_exporter,
+# qui expose les métriques système (CPU, mémoire, disque, réseau) au format
+# Prometheus. Ce qui change d'un environnement à l'autre (niveau de journal) est
+# surchargé dans group_vars/<environnement>.yml, jamais en modifiant le rôle.
+
+# Version figée et empreinte SHA-256 de l'archive officielle : on installe
+# toujours exactement le même binaire, et un fichier altéré pendant le
+# téléchargement est refusé. Changer de version impose de changer l'empreinte.
+monitoring_node_exporter_version: "1.8.2"
+monitoring_node_exporter_arch: amd64
+monitoring_node_exporter_checksum: "sha256:6809dd0b3ec45fd6e992c19071d6b5253aed3ead7bf0686885a51d85c6643c66"
+
+# Noms dérivés de la version : un seul endroit à modifier pour une montée de
+# version.
+monitoring_node_exporter_release: "node_exporter-{{ monitoring_node_exporter_version }}.linux-{{ monitoring_node_exporter_arch }}"
+monitoring_node_exporter_url: >-
+  https://github.com/prometheus/node_exporter/releases/download/v{{ monitoring_node_exporter_version }}/{{ monitoring_node_exporter_release }}.tar.gz
+
+# Compte système dédié, sans shell ni répertoire personnel : si le service était
+# compromis, l'attaquant n'obtiendrait aucun droit sur le reste de la machine.
+monitoring_user: node_exporter
+
+monitoring_install_dir: /opt
+monitoring_bin_path: /usr/local/bin/node_exporter
+
+# Écoute sur la boucle locale uniquement : aucune règle de Security Group n'a à
+# être ouverte. Un futur serveur Prometheus devrait passer par une adresse
+# privée et une règle autorisant son propre Security Group.
+monitoring_listen_address: "127.0.0.1:9100"
+
+# Niveau de journal du service. Sobre par défaut, relevé en staging pour le
+# diagnostic.
+monitoring_log_level: warn
+
+# Collecteurs désactivés : ils ne servent pas sur une instance web et
+# alourdiraient chaque relevé.
+monitoring_disabled_collectors:
+  - wifi
+  - infiniband
+  - nfs
+  - nfsd
