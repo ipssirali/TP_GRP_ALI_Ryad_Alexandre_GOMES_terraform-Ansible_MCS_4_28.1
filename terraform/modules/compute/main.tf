@@ -126,3 +126,78 @@ resource "aws_lb_listener" "http" {
 
   tags = local.tags
 }
+
+# --- Instances applicatives ------------------------------------------------------
+
+# Modèle d'instance de l'ASG. Le user_data ne fait que le strict minimum
+# (nginx + /health) pour que l'instance passe saine tout de suite et ne soit
+# pas remplacée en boucle ; la vraie configuration est appliquée par Ansible.
+resource "aws_launch_template" "app" {
+  name_prefix   = "${local.name_prefix}-app-"
+  image_id      = data.aws_ami.ubuntu.id
+  instance_type = var.instance_type
+  key_name      = var.key_name
+
+  vpc_security_group_ids = [var.app_sg_id]
+
+  # Profil déjà présent dans le compte : donne accès à S3 sans créer de
+  # ressource IAM.
+  iam_instance_profile {
+    name = var.instance_profile_name
+  }
+
+  # Chargé depuis un fichier pour garder le script lisible et testable à part ;
+  # base64encode car le Launch Template attend le user_data déjà encodé.
+  user_data = base64encode(file("${path.module}/user_data.sh"))
+
+  metadata_options {
+    http_endpoint = "enabled"
+    http_tokens   = "required"
+  }
+
+  tags = local.tags
+}
+
+# ASG réparti sur les subnets applicatifs (donc sur plusieurs zones). Il est
+# rattaché au Target Group et son health check est de type ELB : une instance
+# jugée défaillante par l'ALB est remplacée, pas seulement une instance arrêtée.
+resource "aws_autoscaling_group" "app" {
+  name                      = "${local.name_prefix}-asg"
+  min_size                  = var.asg_min_size
+  desired_capacity          = var.asg_desired_capacity
+  max_size                  = var.asg_max_size
+  vpc_zone_identifier       = var.app_subnet_ids
+  target_group_arns         = [aws_lb_target_group.app.arn]
+  health_check_type         = "ELB"
+  health_check_grace_period = 300
+
+  launch_template {
+    id      = aws_launch_template.app.id
+    version = "$Latest"
+  }
+
+  # Ces tags sont propagés aux instances : c'est sur Project, Environment et
+  # Role que l'inventaire dynamique Ansible filtre et groupe les machines, ce
+  # qui permet de cibler staging ou prod sans lister aucune adresse.
+  dynamic "tag" {
+    for_each = merge(local.tags, {
+      Name = "${local.name_prefix}-app"
+      Role = "app"
+    })
+
+    content {
+      key                 = tag.key
+      value               = tag.value
+      propagate_at_launch = true
+    }
+  }
+
+  # Garde-fou : des bornes incohérentes feraient échouer l'apply avec un message
+  # peu lisible. On préfère un refus clair dès le plan.
+  lifecycle {
+    precondition {
+      condition     = var.asg_min_size <= var.asg_desired_capacity && var.asg_desired_capacity <= var.asg_max_size
+      error_message = "Les capacités doivent respecter asg_min_size <= asg_desired_capacity <= asg_max_size."
+    }
+  }
+}
