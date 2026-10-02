@@ -1,0 +1,16 @@
+*.tfstate
+*.tfstate.*
+.terraform/
+crash.log
+*.tfvars
+!*.tfvars.example
+*.pem
+*.key
+id_*
+!*.pub
+credentials
+.env
+*.retry
+*.log
+.vault_pass*
+*vault_pass*
