@@ -1,0 +1,28 @@
+# Valeurs de l'environnement prod. Copier ce fichier en prod.tfvars et renseigner
+# les deux valeurs en bas : prod.tfvars est ignoré par git, ne jamais le versionner.
+
+environment = "prod"
+
+# Réseau : plage distincte de staging (10.20.0.0/16) pour qu'ils ne se chevauchent pas.
+vpc_cidr            = "10.10.0.0/16"
+public_subnet_cidrs = ["10.10.1.0/24", "10.10.2.0/24"]
+app_subnet_cidrs    = ["10.10.11.0/24", "10.10.12.0/24"]
+data_subnet_cidrs   = ["10.10.21.0/24", "10.10.22.0/24"]
+
+# Calcul : prod est la cible de référence, avec le dimensionnement le plus élevé.
+instance_type         = "t3.micro"
+key_name              = "tp-ryad-galaktus-key"
+instance_profile_name = "LabInstanceProfile"
+asg_min_size          = 2
+asg_desired_capacity  = 2
+asg_max_size          = 4
+
+# Données
+db_instance_class = "db.t3.micro"
+db_engine_version = "16.15"
+db_name           = "trackfleet"
+db_username       = "trackfleet_admin"
+
+# À renseigner dans prod.tfvars (valeurs personnelles et secrètes) :
+admin_cidr  = "x.x.x.x/32"
+db_password = "CHANGER_MOI"
